@@ -3,6 +3,8 @@ from flask_restx import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow import Schema, fields
 from all_schemas import DirectorsSchema, GenresSchema, MoviesSchema
+
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -10,6 +12,8 @@ db = SQLAlchemy(app)
 api=Api(app)
 movies_ns=api.namespace('movies')
 genres_ns=api.namespace('genres')
+directors_ns=api.namespace('directors')
+
 class Movie(db.Model):
     __tablename__ = 'movie'
     id = db.Column(db.Integer, primary_key=True)
@@ -101,6 +105,31 @@ class genre_view(Resource):
             return "", 201
         else: return "", 404
 
+@directors_ns.route("/")
+class DirectorsView(Resource):
+    def get(self):
+        directors_schema = DirectorsSchema(many=True)
+        directors = Director.query.all()
+        if directors:
+            return directors_schema.dump(directors), 200
+        else:
+            return "", 404
+    def post(self):
+        req_json = request.json
+        new_director = Director(**req_json)
+        with db.session.begin():
+            db.session.add(new_director)
+        return "", 201
 
+
+@directors_ns.route("/<int:uid>")
+class director_view(Resource):
+    def get(self, uid:int):
+        director = Director.query.get(uid)
+        if director:
+            director_schema = DirectorsSchema()
+            return director_schema.dump(director), 200
+        else:
+            return "", 404
 if __name__ == '__main__':
     app.run()
